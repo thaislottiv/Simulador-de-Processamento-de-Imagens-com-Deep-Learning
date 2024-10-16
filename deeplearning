@@ -1,0 +1,76 @@
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Carregar dataset CIFAR-10
+(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+
+train_images, test_images = train_images / 255.0, test_images / 255.0
+
+class_names = ['Avião', 'Automóvel', 'Pássaro', 'Gato', 'Cervo', 'Cachorro', 'Sapo', 'Cavalo', 'Navio', 'Caminhão']
+
+model = models.Sequential()
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+
+model.add(layers.Flatten())
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dense(10))  # 10 classes
+
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+history = model.fit(train_images, train_labels, epochs=10, 
+                    validation_data=(test_images, test_labels))
+
+test_loss, test_acc = model.evaluate(test_images, test_labels, verbose=2)
+print(f'\nAcurácia no conjunto de teste: {test_acc}')
+
+def plot_image(predictions_array, true_label, img):
+    true_label, img = true_label[0], img
+    plt.grid(False)
+    plt.xticks([])
+    plt.yticks([])
+
+    plt.imshow(img, cmap=plt.cm.binary)
+
+    predicted_label = np.argmax(predictions_array)
+    if predicted_label == true_label:
+        color = 'blue'
+    else:
+        color = 'red'
+
+    plt.xlabel(f"{class_names[predicted_label]} {100*np.max(predictions_array):2.0f}% (Verdadeiro: {class_names[true_label]})", color=color)
+
+def plot_accuracy_loss(history):
+    acc = history.history['accuracy']
+    val_acc = history.history['val_accuracy']
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+
+    epochs_range = range(10)
+
+    plt.figure(figsize=(12, 8))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs_range, acc, label='Acurácia no Treino')
+    plt.plot(epochs_range, val_acc, label='Acurácia na Validação')
+    plt.legend(loc='lower right')
+    plt.title('Acurácia no Treino e Validação')
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs_range, loss, label='Loss no Treino')
+    plt.plot(epochs_range, val_loss, label='Loss na Validação')
+    plt.legend(loc='upper right')
+    plt.title('Loss no Treino e Validação')
+    plt.show()
+
+predictions = model.predict(test_images[:10])
+plot_image(predictions[0], test_labels[0], test_images[0])
+plt.show()
+
+plot_accuracy_loss(history)
